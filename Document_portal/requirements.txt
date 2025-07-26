@@ -1,3 +1,12 @@
 pandas
 numpy
 langchain
+-e .
+python-dotenv
+langchain-groq
+langchain-community
+Pypdf
+faiss-cpu
+langchain-openai
+langchain-huggingface
+sentence-transformers
