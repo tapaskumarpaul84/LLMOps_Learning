@@ -187,5 +187,5 @@ def test_document_ingestion_rag(question):
 
 
 if __name__=="__main__":
-    question="tell me the market analysis report summary"
+    question="What was my last question?"
     test_document_ingestion_rag(question)
