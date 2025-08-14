@@ -1,10 +1,11 @@
+############################Testing code for Document Analysis###############
 # import os
 # from pathlib import Path
 # from src.document_analyzer.data_ingestion import DocumentHandler       # Your PDFHandler class
 # from src.document_analyzer.data_analysis import DocumentAnalyzer  # Your DocumentAnalyzer class
 
 # # Path to the PDF you want to test
-# PDF_PATH = r"F:\\Tapas\\Learning\\LLMOps\\LLMOps_Learning\\Document_portal\\data\\document_analysis\\sample.pdf"
+# PDF_PATH = r"C:\\Users\\sunny\\document_portal\\data\\document_analysis\\sample.pdf"
 
 # # Dummy file wrapper to simulate uploaded file (Streamlit style)
 # class DummyFile:
@@ -46,43 +47,98 @@
 # if __name__ == "__main__":
 #     main()
 
+###################Testing code for Document comparison###################
 
-import io
+# import io
+# from pathlib import Path
+# from src.document_compare.data_ingestion import DocumentIngestion
+# from src.document_compare.document_comparator import DocumentComparatorLLM
+
+# # ---- Setup: Load local PDF files as if they were "uploaded" ---- #
+# def load_fake_uploaded_file(file_path: Path):
+#     return io.BytesIO(file_path.read_bytes())  # simulate .getbuffer()
+
+# # ---- Step 1: Save and combine PDFs ---- #
+# def test_compare_documents():
+#     ref_path = Path("F:\\Tapas\\Learning\\LLMOps\\LLMOps_Learning\\Document_portal\\data\\Long_Report_V1.pdf")
+#     act_path = Path("F:\\Tapas\\Learning\\LLMOps\\LLMOps_Learning\\Document_portal\\data\\Long_Report_V2.pdf")
+
+#     # Wrap them like Streamlit UploadedFile-style
+#     class FakeUpload:
+#         def __init__(self, file_path: Path):
+#             self.name = file_path.name
+#             self._buffer = file_path.read_bytes()
+
+#         def getbuffer(self):
+#             return self._buffer
+
+#     # Instantiate
+#     comparator = DocumentIngestion()
+#     ref_upload = FakeUpload(ref_path)
+#     act_upload = FakeUpload(act_path)
+
+#     # Save files and combine
+#     ref_file, act_file = comparator.save_uploaded_files(ref_upload, act_upload)
+#     combined_text = comparator.combine_documents()
+#     comparator.clean_old_sessions(keep_latest=3)
+
+#     print("\n Combined Text Preview (First 1000 chars):\n")
+#     print(combined_text[:1000])
+
+#     # ---- Step 2: Run LLM comparison ---- #
+#     llm_comparator = DocumentComparatorLLM()
+#     df = llm_comparator.compare_documents(combined_text)
+    
+#     print("\n Comparison DataFrame:\n")
+#     print(df)
+
+# if __name__ == "__main__":
+#     test_compare_documents()
+    
+
+
+##############################Testing code for Single document chat ########################
+
+import sys
 from pathlib import Path
-from src.document_compare.data_ingestion import DocumentIngestion
-from src.document_compare.document_comparator import DocumentComparatorLLM
+from langchain_community.vectorstores import FAISS
+from src.single_document_chat.data_ingestion import SingleDocIngestor
+from src.single_document_chat.retrieval import ConversationalRAG
+from utils.model_loader import ModelLoader
 
-def load_fake_uploaded_file(file_path:Path):
-    return io.BytesIO(file_path.read_bytes())
+FAISS_INDEX_PATH = Path("faiss_index")
 
-def test_compare_docuemnts():
-    ref_path = Path("F:\\Tapas\\Learning\\LLMOps\\LLMOps_Learning\\Document_portal\\data\\document_compare\\Long_Report_V1.pdf")
-    act_path = Path("F:\\Tapas\\Learning\\LLMOps\\LLMOps_Learning\\Document_portal\\data\\document_compare\\Long_Report_V2.pdf")
-    
-    class FakeUpload:
-        def __init__(self,file_path:Path):
-            self.name = file_path.name
-            self._buffer =  file_path.read_bytes()
 
-        def getbuffer(self):
-           return self._buffer
-       
-    comparator = DocumentIngestion()
-    ref_upload = FakeUpload(ref_path)
-    act_upload = FakeUpload(act_path)
-    
-    ref_file, act_file = comparator.save_uploaded_files(ref_upload, act_upload)
-    combined_text = comparator.combine_documents()
-    
-    print("\n Combined Text Preview (First 1000 chars):\n")
-    print(combined_text[:1000])
-    
-    llm_comparator = DocumentComparatorLLM()
-    comparison_df = llm_comparator.compare_documents(combined_text)
-    
-    print("\n=== COMPARISON RESULT ===")
-    print(comparison_df.head())
-    
-if __name__ == "__main__":
-    test_compare_docuemnts()
-    
+def test_conversational_rag_on_pdf(pdf_path:str,question:str):
+    try:
+        model_loader=ModelLoader()
+
+        if FAISS_INDEX_PATH.exists():
+            print("Loading exsting faiss index....")
+            embeddings=model_loader.load_embeddings()
+            vectorestore=FAISS.load_local(folder_path=str(FAISS_INDEX_PATH),embeddings=embeddings,allow_dangerous_deserialization=True)
+            retriever=vectorestore.as_retriever(search_type="similarity",search_kwargs={"k":5})
+        else:
+            print("FAISS index not found. Ingesting PDF and creating index.....")
+            with open(pdf_path, 'rb') as f:
+                uploaded_files=[f]
+                ingestor=SingleDocIngestor()
+                retriever=ingestor.ingest_files(uploaded_files)
+        
+        print("Running conversational RAG....")
+        session_id='test_conversationa_rag'
+        rag=ConversationalRAG(retriever=retriever,session_id=session_id)
+        response=rag.invoke(question)
+        print(f"\nQuestion:{question} \n Answer:{response}")
+    except Exception as e:
+        print(f"Test failed: {str(e)}")
+        sys.exit(1)
+
+if __name__=="__main__":
+    pdf_path="F:\\Tapas\\Learning\\LLMOps\\LLMOps_Learning\\Document_portal\\data\\single_document_chat\\attention-is-all-you-need-Paper.pdf"
+    user_question="What is the significance of the attention mechanism? can you explain it in simple terms?"
+
+    if not Path(pdf_path).exists():
+        print(f" PDF file does not exists at: {pdf_path}")
+        sys.exit(1)
+    test_conversational_rag_on_pdf(pdf_path,user_question)

@@ -2,7 +2,7 @@ import traceback
 import sys
 from logger.custom_logger import CustomLogger
 
-logger=CustomLogger().get_logger(__file__)
+#
 class DocumentPortalException(Exception):
     """Custom Exception for Document Portal"""
     def __init__(self,error_message:str,error_detail:sys):
@@ -26,5 +26,6 @@ if __name__=="__main__":
         
     except Exception as e:
         app_exc=DocumentPortalException(e,sys)
+        logger=CustomLogger().get_logger(__file__)
         logger.error(app_exc)
         raise app_exc
