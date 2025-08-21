@@ -1,4 +1,3 @@
-import os
 import sys
 from utils.model_loader import ModelLoader
 from logger.custom_logger import CustomLogger

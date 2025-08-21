@@ -1,12 +1,10 @@
 from __future__ import annotations
 import os
 import sys
-import uuid
 import hashlib
 import json
 import shutil
 from pathlib import Path
-from datetime import datetime,timezone
 from typing import List,Optional,Dict,Any,Iterable
 
 
@@ -14,13 +12,12 @@ import fitz
 from langchain.schema import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_community.document_loaders import PyPDFLoader,TextLoader,Docx2txtLoader
 
 from utils.model_loader import ModelLoader
 from logger.custom_logger import CustomLogger
 from exceptions.custom_exception import DocumentPortalException
 from utils.file_io import generate_session_id,save_uploaded_files
-from utils.document_ops import load_documents,concat_for_analysis,concat_for_comparison
+from utils.document_ops import load_documents
 
 SUPPORTED_EXTENSIONS={'.pdf','.txt','.docx'}
 
