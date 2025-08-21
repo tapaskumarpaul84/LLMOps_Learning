@@ -6,61 +6,47 @@ from fastapi.templating import Jinja2Templates
 from typing import Dict,List,Any,Optional
 from pathlib import Path
 import os
-
 from src.document_analyzer.data_analysis import DocumentAnalyzer
-from src.document_ingestion.data_ingestion import DocHandler,DocumentComparator,ChatIngestor,FaissManager
+from src.document_ingestion.data_ingestion import DocHandler,DocumentComparator,ChatIngestor
 from src.document_compare.document_comparator import DocumentComparatorLLM
 from src.document_chat.retrieval import ConversationalRAG
+from utils.document_ops import FastAPIFileAdapter,read_pdf_via_handler
 
 
-BASE_DIR=Path(__file__).resolve().parent.parent
-app=FastAPI(title="Document Portal API",version="0.1")
+FAISS_BASE = os.getenv("FAISS_BASE", "faiss_index")
+UPLOAD_BASE = os.getenv("UPLOAD_BASE", "data")
+FAISS_INDEX_NAME = os.getenv("FAISS_INDEX_NAME", "index")  # <--- keep consistent with save_local()
+
+app = FastAPI(title="Document Portal API", version="0.1")
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
 
-app.mount("/static",StaticFiles(directory=BASE_DIR/"static"),name='static')
-templates=Jinja2Templates(directory=BASE_DIR/"templates")
 
-@app.get("/",response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse)
 async def serve_ui(request: Request):
-    return templates.TemplateResponse("index.html",{"request":request})
+    resp = templates.TemplateResponse("index.html", {"request": request})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 @app.get("/health")
-def health() ->Dict[str,str]:
-    return {"status":"ok","service":"document-portal"}
-
-class FastAPIFileAdapter:
-    """Adapt FastAPI UploadFile -> .name + .getbuffer() API"""
-    def __init__(self,uf:UploadFile):
-        self._uf=uf
-        self.name=uf.filename
-
-    def getbuffer(self)-> None:
-        self._uf.file.seek(0)
-        return self._uf.file.read()
-        
-
-def _read_pdf_va_handler(handler: DocHandler,path:str)-> str:
-    """
-    Helper function to read PDF using DocHandler.
-    """
-    try:
-        pass
-    except Exception as e:
-        raise HTTPException(status_code=500,detail= f"Error in reading PDF: {str(e)}")
-
+def health() -> Dict[str, str]:
+    return {"status": "ok", "service": "document-portal"}
 
 @app.post("/analyze")
 async def analyze_document(file: UploadFile=File(...))-> Any:
     try:
         dh=DocHandler()
         saved_path=dh.save_pdf(FastAPIFileAdapter(file))
-        text=_read_pdf_va_handler(dh,saved_path)
+        text=read_pdf_via_handler(dh,saved_path)
 
         analyzer=DocumentAnalyzer()
         result=analyzer.analyze_document(text)
