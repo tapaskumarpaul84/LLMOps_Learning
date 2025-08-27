@@ -121,4 +121,4 @@ async def chat_query(
 
 # command for run uvicorn
 
-# uvicorn app.main:app --reload
+# uvicorn api.main:app --reload

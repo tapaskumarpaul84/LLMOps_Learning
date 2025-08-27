@@ -10,7 +10,6 @@ packages=[
     "faiss-cpu",
     "structlog",
     "PyMuPDF",
-    "pylint",
     "langchain-core",
     "pytest",
     "streamlit",
@@ -18,7 +17,12 @@ packages=[
     "uvicorn",
     "python-multipart",
     "docx2txt",
-    "pypdf"
+    "pypdf",
+    "langchain_huggingface",
+    "langchain_openai",
+    "pydantic",
+    "pathlib",
+    "langchain_text_splitters"
 ]
 
 for pkg in packages:
